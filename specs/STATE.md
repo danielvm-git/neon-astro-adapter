@@ -2,7 +2,7 @@
 
 ## Current Status
 
-Epic 1 (Adapter Core) complete. Epic 2 (Handler & Middleware) is next.
+Epic 2 (Handler & Middleware) complete. Epic 3 (Unified Entry & Client) is next.
 
 ## Git Metadata
 
@@ -29,11 +29,16 @@ Epic 1 (Adapter Core) complete. Epic 2 (Handler & Middleware) is next.
 - [x] → `a9ae72b feat: adapter core` → pushed → minor bump
 
 ### Epic 2 — Handler & Middleware
-- [ ] 2.1 RED — `src/server/handler.test.ts`
-- [ ] 2.2 GREEN — `src/server/handler.ts`
-- [ ] 2.3 RED — `src/server/middleware.test.ts`
-- [ ] 2.4 GREEN — `src/server/middleware.ts`
+- [x] 2.1 RED — `src/server/handler.test.ts`
+- [x] 2.2 GREEN — `src/server/handler.ts`
+- [x] 2.3 RED — `src/server/middleware.test.ts`
+- [x] 2.4 GREEN — `src/server/middleware.ts`
+- [x] 2.5 REFACTOR — wire exports in `src/server/index.ts`
+- [x] 2.6 REVIEW — audit-code passed, request-review fixes applied (AbortSignal timeout, graceful degradation, configurable skipRoutes, stronger assertions)
 - [ ] → `git commit -m "feat: handler and middleware"` → push → minor bump
+
+## Infrastructure
+- [x] Preflight script at `package.json` `preflight` — runs `tsdown && tsc --noEmit && vitest run`
 
 ### Epic 3 — Unified Entry & Client
 - [ ] 3.1 RED — `src/server/index.test.ts`
@@ -54,4 +59,4 @@ Epic 1 (Adapter Core) complete. Epic 2 (Handler & Middleware) is next.
 
 ## Next Action
 
-Start Epic 2: Build thin HTTP proxy handler (`src/server/handler.ts`) + session-check middleware (`src/server/middleware.ts`). No import of `@neondatabase/auth` server internals — standalone HTTP proxy approach.
+Start Epic 3: Unified entry (`createAstroAuth()`) + client (`createAuthClient()`).

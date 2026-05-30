@@ -30,6 +30,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
     "clean": "rm -rf dist",
+    "preflight": "tsdown && tsc --noEmit && vitest run",
     "commitlint": "commitlint --edit",
     "prepare": "husky"
   },

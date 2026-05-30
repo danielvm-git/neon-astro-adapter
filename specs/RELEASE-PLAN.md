@@ -57,8 +57,13 @@ MVP v1.0.0 ships when Epics 1-4 are complete. Epic 5 is docs-only (no release).
 
 ### Story 2.4 — Implement middleware (GREEN)
 - **File:** `src/server/middleware.ts`
-- **Implements:** `astroMiddleware()` wrapping `processAuthMiddleware()` with Astro `defineMiddleware`
+- **Implements:** `astroMiddleware()` — session-check middleware; allows/redirects based on upstream get-session call
 - **Verify:** test passes
+
+### Story 2.5 — Refactor + wire exports
+- **Files:** `src/server/index.ts` barrel
+- **Change:** Export `astroApiHandler`, `astroMiddleware` types alongside adapter
+- **Verify:** `npx tsdown && npx tsc --noEmit && npx vitest run`
 
 ---
 
