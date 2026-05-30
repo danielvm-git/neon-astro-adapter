@@ -118,9 +118,14 @@ MVP v1.0.0 ships when Epics 1-4 are complete. Epic 5 is docs-only (no release).
 - **Implements:** `neonAuth(config?)` returning `AstroIntegration` — `astro:config:setup` uses `injectRoute` for handler + `addMiddleware` for middleware, with entrypoint URLs to this package's exports
 - **Verify:** test passes
 
-### Story 4.3 — Publish v1.0.0
+### Story 4.3 — Entrypoint modules
+- **Files:** `src/route-handler.ts`, `src/middleware-handler.ts`
+- **Implements:** Standalone entrypoint modules reading `NEON_AUTH_BASE_URL` and `NEON_AUTH_COOKIE_SECRET` env vars, exporting GET/POST/... handler and `onRequest` middleware
+- **Verify:** `npx tsdown` produces `dist/route-handler.mjs` and `dist/middleware-handler.mjs`
+
+### Story 4.4 — Publish v1.0.0
 - All epics 1-4 complete → semantic-release publishes v1.0.0
-- **Verify:** `gh run list --branch main` shows green release
+- **Verify:** `gh run list --branch main` shows green release → v1.0.0
 
 ---
 

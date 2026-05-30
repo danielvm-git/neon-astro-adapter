@@ -2,7 +2,7 @@
 
 ## Current Status
 
-Epic 3 (Unified Entry & Client) complete. Epic 4 (Integration + v1.0.0) is next.
+Epic 4 (Integration + v1.0.0) complete. Next: Example app (post-v1.0.0).
 
 ## Git Metadata
 
@@ -46,9 +46,15 @@ Epic 3 (Unified Entry & Client) complete. Epic 4 (Integration + v1.0.0) is next.
 ## Pending (ordered by epic)
 
 ### Epic 4 — Integration + v1.0.0
-- [ ] 4.1 RED — `src/integration.test.ts`
-- [ ] 4.2 GREEN — `src/integration.ts`
-- [ ] 4.3 PUBLISH — v1.0.0
+- [x] 4.1 RED — `src/integration.test.ts`
+- [x] 4.2 GREEN — `src/integration.ts`
+- [x] 4.3 ENTRYPOINTS — `src/route-handler.ts` + `src/middleware-handler.ts`
+- [x] 4.4 WIRE — package.json exports + tsdown entries
+- [x] → `feat: astro integration` → push → v1.0.0
+
+## Infrastructure
+- [x] Preflight at `package.json` `preflight` script
+- [x] Exports: `.`, `./server`, `./route-handler`, `./middleware-handler`
 
 ### Epic 5 — Example App (post-v1.0.0)
 - [ ] 5.1 Create `examples/astro-neon-auth/`
