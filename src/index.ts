@@ -9,3 +9,6 @@ export function createAuthClient<T extends NeonAuthAdapter = NeonAuthAdapter>(
 ): NeonAuthPublicApi<T> {
   return _createAuthClient<T>(url);
 }
+
+export { neonAuth } from './integration';
+export type { NeonAuthIntegrationConfig } from './integration';
