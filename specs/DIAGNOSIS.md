@@ -1,89 +1,54 @@
 ## Problem
 
-The Release step in the CI workflow fails:
+`pnpm install --frozen-lockfile` fails with `ERR_PNPM_IGNORED_BUILDS`:
 
 ```
-Run npx --package semantic-release@25 --package @semantic-release/git semantic-release
-sh: 1: semantic-release: not found
-Error: Process completed with exit code 127.
+[ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: core-js@3.49.0
+Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.
+Error: Process completed with exit code 1.
 ```
 
-The workflow should publish the package to npm after a successful build. Instead, the pipeline aborts at the Release step.
+This blocks CI (release workflow) and any fresh install.
 
 ## Root Cause Analysis
 
-### Phase 1 — Reproduce
+**Phase 1 — Reproduce:** `pnpm install --frozen-lockfile` fails locally with the same error. Consistent.
 
-The `npx --package semantic-release@25 --package @semantic-release/git semantic-release` command works locally (macOS, npm 11.12.1) but fails in CI (Ubuntu, Node 22 LTS, npm 10.x).
+**Phase 2 — Isolate:** pnpm v11 enforces build script approval via `allowBuilds` in `pnpm-workspace.yaml`. The file had:
 
-Locally confirmed:
-- `semantic-release@25.0.3` is already present in the pnpm virtual store as a transitive peer dependency of `@semantic-release/git` (which IS a devDependency)
-- `node_modules/.bin/semantic-release` exists and works via `pnpm exec semantic-release --version`
+```yaml
+allowBuilds:
+  core-js: set this to true or false
+  esbuild: true
+  sharp: true
+```
 
-### Phase 2 — Isolate
+The value `set this to true or false` is a placeholder string, not a boolean `true`. pnpm treats it as an unapproved build script and errors out.
 
-The failing line is the `npx --package` invocation. Earlier steps (install, build) complete successfully.
+**Phase 3 — Hypothesize:** The root cause is the placeholder value for `core-js` in the allow list.
 
-- `pnpm install --frozen-lockfile` — succeeds, installs all deps including semantic-release into the virtual store
-- `npx tsdown` — succeeds (tsdown is a devDependency, found in local node_modules)
-- `npx --package semantic-release@25 --package @semantic-release/git semantic-release` — fails with exit 127
+**Phase 4 — Verify:** Changed value to `core-js: true`. `pnpm install --frozen-lockfile` now succeeds with `Already up to date` (exit 0). Hypothesis confirmed.
 
-### Phase 3 — Hypothesize
-
-**Hypothesis A (most likely):** The `npx --package` flag attempts to download packages from the npm registry into npm's global cache. In CI, the npm cache is not configured (only pnpm cache is set via `setup-node cache: pnpm`), and the download either fails or `npx` in npm 10.x handles the `--package` flag differently than npm 11.x (different resolution and install behavior for transient packages).
-
-**Hypothesis B:** The `--package` flag with two packages causes `npx` to fail when one package (`@semantic-release/git`) is a local devDependency but the other (`semantic-release@25`) requires a registry fetch. The inconsistency in resolution sources causes `npx` to give up.
-
-**Hypothesis C:** The npm cache directory on the GitHub Actions runner is restricted or the npm registry is unreachable from the ephemeral npx installation environment.
-
-### Phase 4 — Verify
-
-Confirmed locally:
-- `npx --package` with a non-installed package (`cowsay`) downloads and runs successfully — so `npx --package` does work to download packages from the registry locally
-- `semantic-release` IS in the local pnpm virtual store (at `node_modules/.pnpm/semantic-release@25.0.3_typescript@5.9.3/`)
-- `node_modules/.bin/semantic-release` exists and runs correctly via `pnpm exec semantic-release --version` (exit 0)
-
-The root cause is a mismatch between how `npx --package` resolves packages in npm 10 (CI) vs npm 11 (local). Since `semantic-release` is already available in the local node_modules via the lockfile (peer dependency of `@semantic-release/git`), the `--package` download is both unnecessary and unreliable.
-
-**Risk level:** Low — fix is a one-line CI workflow change.
+Risk level: **Low** — one-line config fix, no code changes.
 
 ## TDD Fix Plan
 
-### 1. RED → GREEN: Fix the Release step
-
-**GREEN:** Replace `npx --package semantic-release@25 --package @semantic-release/git semantic-release` with `pnpm exec semantic-release` in the workflow file. This resolves from the local `node_modules/.bin` where `semantic-release` is already installed.
-
-**verify:** `pnpm exec semantic-release --version` returns `25.0.3`
+1. **GREEN**: Change `core-js: set this to true or false` to `core-js: true` in `pnpm-workspace.yaml`
+   **verify**: `pnpm install --frozen-lockfile` exits 0
 
 ## Acceptance Criteria
 
-- [x] Release step uses `pnpm exec semantic-release` instead of `npx --package`
-- [x] `pnpm exec semantic-release --version` confirms version 25.0.3
-- [x] Husky commit-msg hook skips `[skip ci]` commits
-- [x] `v0.0.0` tag exists as version baseline
-- [ ] CI pipeline runs through to completion (next push to `main`)
+- [x] `pnpm install --frozen-lockfile` completes without error
+- [x] `pnpm install` (without frozen) also succeeds
+- [x] `npx vitest run` still passes
+- [x] `npx tsdown` still builds
+- [x] `npx tsc --noEmit` passes
 
 ## Resolution
 
-- Changed Release step from `npx --package semantic-release@25 --package @semantic-release/git semantic-release` to `pnpm exec semantic-release`
-- Added `semantic-release@25` as a direct devDependency (`pnpm add -D semantic-release@25`)
-- `semantic-release` was a peer dependency of `@semantic-release/git` — pnpm peer dependency hoisting varies across versions and environments, causing `pnpm exec` to fail with `ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL` in CI
-- Making it a direct dependency guarantees `node_modules/.bin/semantic-release` is always created regardless of peer dep resolution
-
-**CI pipeline simulation:**
-- `pnpm install --frozen-lockfile` → exit 0
-- `npx tsdown` → builds successfully
-- `pnpm exec semantic-release --version` → `25.0.3` (exit 0)
-
-### Additional fix: husky commitlint blocks semantic-release commits
-
-Semantic-release generates `chore(release): X.Y.Z [skip ci]` commits with release notes containing GitHub URLs. These exceed commitlint's 100-char `body-max-line-length` rule, causing the commit-msg hook to reject the commit.
-
-**Fix:** Updated `.husky/commit-msg` to detect `[skip ci]` markers and bypass commitlint for semantic-release generated commits:
-```sh
-grep -q '\[skip ci\]' "$1" || npx --no -- commitlint --edit "$1"
-```
-
-### Version baseline: v0.0.0 tag
-
-Semantic-release defaults the first release on `main` to `1.0.0` (hardcoded `FIRST_RELEASE` constant). Tagged `v0.0.0` as the initial baseline so subsequent `feat:` commits bump from `0.0.0` → `0.1.0`, following the TDD epic-by-epic plan.
+**Fixed:** 2026-05-30
+**Root cause confirmed:** Placeholder string `set this to true or false` in `pnpm-workspace.yaml` `allowBuilds.core-js` instead of boolean `true`
+**Fix applied:** Changed value to `true` in `pnpm-workspace.yaml`
+**Hardening added:** None needed — one-time config fix
+**Evidence:** `pnpm install --frozen-lockfile` exits 0
+**Commit:** `fix: approve core-js build script in pnpm-workspace.yaml`
