@@ -1,24 +1,40 @@
 # Scope: Neon Auth Astro Adapter
 
-## In Scope
+## In Scope — MVP (v1.0.0)
 
-- [ ] `@neondatabase/auth/astro` — client-side `createAuthClient()` for Astro
-- [ ] `@neondatabase/auth/astro/server` — server-side adapter, handler, middleware, `createAstroAuth()`
-- [ ] `neonAuth()` AstroIntegration — optional zero-config integration (auto-injects route + middleware)
-- [ ] `@neondatabase/neon-js/auth/astro` — re-export wrappers (4 files in `packages/neon-js/src/auth/astro/`)
-- [ ] `@neondatabase/neon-js/auth/astro/server` — re-export wrappers
-- [ ] Example app: `examples/astro-neon-auth/` (workspace protocol, local build)
-- [ ] Tests: config validation, return value structure (matching `next/server/index.test.ts` pattern)
-- [ ] TypeScript strict compliance, all `pnpm typecheck` passes
-- [ ] `pnpm run build` succeeds for all affected packages
-- [ ] `pnpm test:ci` passes for all affected packages
+### Epic 1: Adapter Core
+- [ ] `src/server/adapter.ts` — `createAstroRequestContext()` implementing `RequestContext` via Astro's `APIContext`
+- [ ] `src/server/adapter.test.ts` — unit tests for all RequestContext methods
+- [ ] `src/server/index.ts` — re-export barrel
+- [ ] `package.json` exports → `"./server"` entry point
+- [ ] tsdown entry for `src/server/index.ts`
+
+### Epic 2: Handler & Middleware
+- [ ] `src/server/handler.ts` — `astroApiHandler()` wrapping `handleAuthProxyRequest()`
+- [ ] `src/server/handler.test.ts` — proxy request / config validation tests
+- [ ] `src/server/middleware.ts` — `astroMiddleware()` wrapping `processAuthMiddleware()` via `defineMiddleware`
+- [ ] `src/server/middleware.test.ts` — decision mapping and cookie tests
+
+### Epic 3: Unified Entry & Client
+- [ ] `src/server/index.ts` — `createAstroAuth()` combining server + handler + middleware
+- [ ] `src/server/index.test.ts` — config validation + return structure tests
+- [ ] `src/index.ts` — `createAuthClient()` using `BetterAuthReactAdapter()`
+- [ ] `src/index.test.ts` — client shape tests
+
+### Epic 4: Integration & Release
+- [ ] `src/integration.ts` — `neonAuth()` AstroIntegration with `astro:config:setup` hooks
+- [ ] `src/integration.test.ts` — injectRoute + addMiddleware assertions
+- [ ] v1.0.0 published to npm
+
+### Epic 5: Example App (post-release)
+- [ ] `examples/astro-neon-auth/` — reference app with handler, middleware, pages
+- [ ] Manual E2E smoke test
 
 ## Out of Scope
 
 - Database integration (`@neondatabase/postgrest-js`) — already framework-agnostic, no changes needed
 - Auth UI components (`@neondatabase/auth-ui`) — React-only; Astro users can import React components directly
-- E2E tests — requires Neon backend credentials; PR CI will run them
-- `@neondatabase/neon-js/cli` — no changes needed
+- E2E tests requiring Neon backend credentials
 - Other framework adapters (SvelteKit, Remix, SolidStart)
 - CSS / theming — not applicable
 
@@ -32,47 +48,44 @@
 | D4 | `getCookies()` reads raw Cookie header from `context.request.headers` | `RequestContext` contract returns header string. `APIContext.cookies` is a key-value API — can't use it for this purpose. |
 | D5 | API handler returns Response directly | `handleAuthProxyRequest()` already returns a Response with Set-Cookie headers. Astro forwards Response headers including cookies. No manual cookie copying needed. |
 | D6 | Middleware uses `defineMiddleware` + `context.redirect()` for auth redirects | Matches Astro idioms. For "allow" case, cookies from `processAuthMiddleware` result are set via `context.cookies.set()`. |
+| D7 | Every story starts with a failing test (RED) | TDD discipline — ensures testable contracts before implementation. |
 
 ## Files to Create
 
 ```
-packages/auth/src/astro/
-├── server/
-│   ├── adapter.ts       (~40 LOC)  — RequestContext impl
-│   ├── handler.ts       (~40 LOC)  — API proxy handler
-│   ├── middleware.ts     (~70 LOC)  — Auth middleware
-│   ├── index.ts         (~80 LOC)  — createAstroAuth()
-│   └── index.test.ts    (~60 LOC)  — config validation tests
-├── integration.ts       (~50 LOC)  — AstroIntegration
-└── index.ts             (~15 LOC)  — client createAuthClient()
-
-packages/neon-js/src/auth/astro/
-├── index.ts             (~3 LOC)  — re-export @neondatabase/auth/astro
+src/
+├── index.ts                 (~15 LOC)  — createAuthClient()
+├── index.test.ts            (~30 LOC)  — client shape tests
+├── integration.ts           (~50 LOC)  — neonAuth() AstroIntegration
+├── integration.test.ts      (~40 LOC)  — injectRoute + addMiddleware tests
 └── server/
-    └── index.ts         (~3 LOC)  — re-export @neondatabase/auth/astro/server
+    ├── adapter.ts           (~40 LOC)  — createAstroRequestContext()
+    ├── adapter.test.ts      (~50 LOC)  — RequestContext unit tests
+    ├── handler.ts           (~40 LOC)  — astroApiHandler()
+    ├── handler.test.ts      (~50 LOC)  — proxy request tests
+    ├── middleware.ts         (~70 LOC)  — astroMiddleware()
+    ├── middleware.test.ts    (~60 LOC)  — decision mapping tests
+    ├── index.ts             (~80 LOC)  — createAstroAuth()
+    └── index.test.ts        (~60 LOC)  — config validation tests
 
 examples/astro-neon-auth/
 ├── astro.config.mjs
 ├── package.json
 └── src/
     ├── middleware.ts
-    ├── pages/
-    │   ├── index.astro
-    │   ├── auth/
-    │   │   └── sign-in.astro
-    │   ├── dashboard.astro
-    │   └── api/
-    │       └── auth/
-    │           └── [...slug].ts
-    └── lib/
-        └── auth.ts
+    └── pages/
+        ├── index.astro
+        ├── auth/
+        │   └── sign-in.astro
+        ├── dashboard.astro
+        └── api/
+            └── auth/
+                └── [...slug].ts
 ```
 
 ## Files to Modify
 
 ```
-packages/auth/package.json          — peerDependencies.astro, exports "./astro" + "./astro/server"
-packages/auth/tsdown.config.ts      — add 2 entry points to entry array
-packages/neon-js/package.json       — exports "./auth/astro" + "./auth/astro/server"
-packages/neon-js/tsdown.config.ts   — add 2 entry points to entry array
+package.json          — exports "./server" + "."
+tsdown.config.ts      — entry points for src/index.ts + src/server/index.ts
 ```

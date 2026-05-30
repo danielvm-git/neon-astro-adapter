@@ -2,83 +2,75 @@
 
 ## Stack
 
-- **Monorepo:** pnpm workspaces, [neon-js](https://github.com/neondatabase/neon-js)
-- **Build:** tsdown (Rolldown-powered), ESM-only output, shared base config at `build/tsdown-base.ts`
+- **Project:** Standalone `@neondatabase/auth-astro` (not part of neon-js monorepo)
+- **Build:** tsdown (Rolndown-powered), ESM-only output
 - **Framework:** Astro >=5.0.0 (peer dependency, optional)
-- **Auth Core:** Better Auth 1.x via framework-agnostic server layer (`packages/auth/src/server/`)
-- **Target Package:** `@neondatabase/auth` (`packages/auth/`)
-- **Re-export Target:** `@neondatabase/neon-js` (`packages/neon-js/`)
+- **Auth Core:** `@neondatabase/auth` (npm dependency) — Better Auth 1.x via framework-agnostic server layer
+- **Runtime:** Node v26, pnpm v11.1.2 (with `ignore-scripts=true` workaround)
+- **Release:** semantic-release via GitHub Actions
 
 ## Domain Model
 
-### Core Abstractions (framework-agnostic — no code changes needed)
+### Core Abstractions (provided by `@neondatabase/auth` — no changes needed)
 
-| Abstraction | Location | Role |
+| Abstraction | Role |
+|---|---|
+| `RequestContext` | Interface: `getCookies()`, `setCookie()`, `getHeader()`, `getOrigin()`, `getFramework()` |
+| `RequestContextFactory` | `() => RequestContext \| Promise<RequestContext>` |
+| `createAuthServerInternal()` | Creates proxy-based auth server with all Better Auth methods |
+| `handleAuthProxyRequest()` | Generic proxy: cookie cache → upstream fallback → response minting |
+| `processAuthMiddleware()` | Framework-agnostic middleware: returns `allow \| redirect_oauth \| redirect_login` |
+| `validateCookieConfig()` | Cookie secret validation (>=32 chars) |
+| `NeonAuthConfig` / `NeonAuthMiddlewareConfig` | Config types (baseUrl, cookies.secret, sessionDataTtl, domain, sameSite) |
+
+### Astro Adapter Pattern
+
+| Component | File | Pattern |
 |---|---|---|
-| `RequestContext` | `server/request-context.ts:12-28` | Interface: `getCookies()`, `setCookie()`, `getHeader()`, `getOrigin()`, `getFramework()` |
-| `RequestContextFactory` | `server/request-context.ts:41` | `() => RequestContext \| Promise<RequestContext>` |
-| `createAuthServerInternal()` | `server/client-factory.ts:31` | Creates proxy-based auth server with all Better Auth methods |
-| `handleAuthProxyRequest()` | `server/proxy/handler.ts:41` | Generic proxy: cookie cache → upstream fallback → response minting |
-| `processAuthMiddleware()` | `server/middleware/processor.ts:60` | Framework-agnostic middleware: returns decision objects (`allow \| redirect_oauth \| redirect_login`) |
-| `validateCookieConfig()` | `server/config.ts:103` | Cookie secret validation (>=32 chars) |
-| `NeonAuthConfig` / `NeonAuthMiddlewareConfig` | `server/config.ts:81,86` | Config types (baseUrl, cookies.secret, sessionDataTtl, domain, sameSite) |
-
-### Framework Adapters
-
-| Framework | Adapter | Pattern |
-|---|---|---|
-| Next.js (reference) | `src/next/server/adapter.ts` | Uses `cookies()` + `headers()` from `next/headers` (implicit per-request context) |
-| **Astro (new)** | `src/astro/server/adapter.ts` | Uses `APIContext` explicitly — `context.request.headers.get('cookie')`, `context.cookies.set()`, `context.url.origin` |
+| Adapter | `src/server/adapter.ts` | `createAstroRequestContext(context: APIContext): RequestContext` — maps APIContext to RequestContext interface |
+| Handler | `src/server/handler.ts` | `astroApiHandler(config): (ctx: APIContext) => Promise<Response>` — wraps `handleAuthProxyRequest()` |
+| Middleware | `src/server/middleware.ts` | `astroMiddleware(config): Parameters<typeof defineMiddleware>` — wraps `processAuthMiddleware()` |
+| Unified entry | `src/server/index.ts` | `createAstroAuth(config)` — returns server + handler + middleware |
+| Client | `src/index.ts` | `createAuthClient()` — pre-configured with `BetterAuthReactAdapter()` |
+| Integration | `src/integration.ts` | `neonAuth(): AstroIntegration` — auto-wires route + middleware in `astro:config:setup` |
 
 ### Key difference from Next.js adapter
 
-Next.js uses implicit `cookies()/headers()` with no parameters — they're per-request async context.
-Astro requires the `APIContext` object to be threaded explicitly. The adapter factory takes `context: APIContext`.
+Next.js uses implicit `cookies()/headers()` with no parameters (per-request async context).
+Astro requires `APIContext` threaded explicitly. The adapter factory takes `context: APIContext`.
 
-### Integration Layer (optional)
-
-| Framework | Entry Point | Combines |
-|---|---|---|
-| Next.js | `next/server/index.ts` → `createNeonAuth()` | `createAuthServerInternal()` + `authApiHandler()` + `neonAuthMiddleware()` → unified `NeonAuth` type |
-| **Astro (new)** | `astro/server/index.ts` → `createAstroAuth()` | Analogous — returns server methods + handler + middleware |
-| **Astro (new)** | `astro/integration.ts` → `neonAuth()` | `AstroIntegration` that auto-injects route + middleware via `astro:config:setup` hooks |
-
-### Export Hierarchy
+## Exports
 
 ```
-@neondatabase/auth
-├── ./astro          → dist/astro/index.mjs        (client: createAuthClient)
-├── ./astro/server   → dist/astro/server/index.mjs  (server: createAstroAuth)
-
-@neondatabase/neon-js (re-exports)
-├── ./auth/astro          → re-exports @neondatabase/auth/astro
-├── ./auth/astro/server   → re-exports @neondatabase/auth/astro/server
+@neondatabase/auth-astro
+├── .                  → dist/index.mjs          (createAuthClient)
+├── ./server           → dist/server/index.mjs   (createAstroAuth)
 ```
 
-## Conventions (from CLAUDE.md)
+## Conventions
 
-- TypeScript strict mode enabled
+- TypeScript strict mode
 - Functional patterns preferred
 - NO `I` prefix in interface names
-- Absolute imports using workspace protocol
-- Package naming: `@neondatabase/<name>`
-- Subpath exports follow Next.js precedent exactly
-- `workspace:*` protocol for internal dependencies
-- Tests: Vitest with MSW for unit tests, Playwright for E2E
-- Build: `tsdown` with shared `createPackageConfig()` base
-- CSS: Not applicable (no UI components in this adapter)
+- NO comments in code
+- Tests: Vitest, TDD (RED → GREEN → REFACTOR per story)
+- Build: `npx tsdown` (direct, not via pnpm script — pnpm issue workaround)
+- Commits: Conventional Commits (Angular), enforced by commitlint + husky
+- ESM-only output
 
-## Key Files (reference — read before coding)
+## Reference Architecture
 
-| File | Purpose |
-|---|---|
-| `packages/auth/src/next/server/adapter.ts` | Reference adapter implementation (38 LOC) |
-| `packages/auth/src/next/server/handler.ts` | Reference API handler (66 LOC) |
-| `packages/auth/src/next/server/middleware.ts` | Reference middleware (111 LOC) |
-| `packages/auth/src/next/server/index.ts` | Reference unified entry (208 LOC) |
-| `packages/auth/src/next/server/index.test.ts` | Reference test pattern (117 LOC) |
-| `packages/auth/tsdown.config.ts` | Entry points + build config |
-| `packages/auth/package.json` | Exports + peerDependencies |
-| `packages/neon-js/src/auth/next/index.ts` | Re-export wrapper pattern |
-| `packages/neon-js/package.json` | Re-export exports map |
-| `packages/neon-js/tsdown.config.ts` | Re-export entry points |
+Study Next.js adapter in `@neondatabase/auth` for the pattern to replicate:
+
+| Component | Next.js (reference) | Astro (this project) |
+|---|---|---|
+| Adapter | `createNextRequestContext()` | `createAstroRequestContext()` |
+| Handler | `nextApiHandler()` | `astroApiHandler()` |
+| Middleware | `nextMiddleware()` | `astroMiddleware()` |
+| Client | `createAuthClient()` | `createAuthClient()` (same — framework-agnostic) |
+
+## Critical Notes
+
+- pnpm v11.1.2 has dep-status-check bug with esbuild/sharp build scripts → `ignore-scripts=true` in `.npmrc`
+- CI uses `--ignore-scripts` flag and runs `npx husky` explicitly
+- Astro >=5.0.0 is an optional peer dependency
