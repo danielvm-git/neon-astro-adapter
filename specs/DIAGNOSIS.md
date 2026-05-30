@@ -1,82 +1,71 @@
 ## Problem
 
-The `pnpm approve-builds --global esbuild sharp 2>/dev/null; true` command in the CI release workflow fails with exit code 1, aborting the pipeline before dependencies are installed or the package is built.
+The Release step in the CI workflow fails:
 
-**Actual:** CI step exits with code 1.
-**Expected:** Should gracefully skip or succeed, allowing install → build → release to continue.
+```
+Run npx --package semantic-release@25 --package @semantic-release/git semantic-release
+sh: 1: semantic-release: not found
+Error: Process completed with exit code 127.
+```
+
+The workflow should publish the package to npm after a successful build. Instead, the pipeline aborts at the Release step.
 
 ## Root Cause Analysis
 
-Two issues compound to produce the failure:
+### Phase 1 — Reproduce
 
-### Issue 1: `--global` flag removed from `pnpm approve-builds` in v11
+The `npx --package semantic-release@25 --package @semantic-release/git semantic-release` command works locally (macOS, npm 11.12.1) but fails in CI (Ubuntu, Node 22 LTS, npm 10.x).
 
-The `pnpm approve-builds` command accepts `--all` to approve all pending builds non-interactively, and package names as positional arguments. However, the `--global` (`-g`) flag was **removed in pnpm v11.0.0**. Running `pnpm approve-builds --global esbuild sharp` exits with code 1 because `--global` is no longer a recognized flag for this command.
+Locally confirmed:
+- `semantic-release@25.0.3` is already present in the pnpm virtual store as a transitive peer dependency of `@semantic-release/git` (which IS a devDependency)
+- `node_modules/.bin/semantic-release` exists and works via `pnpm exec semantic-release --version`
 
-Additionally, `pnpm approve-builds` writes approved packages to the `allowBuilds` map in `pnpm-workspace.yaml`. This project has no `pnpm-workspace.yaml`, so even without `--global`, the command would find nothing to approve (all builds are already ignored by `ignore-scripts=true`).
+### Phase 2 — Isolate
 
-### Issue 2: `; true` doesn't suppress exit code 1 under `set -e`
+The failing line is the `npx --package` invocation. Earlier steps (install, build) complete successfully.
 
-GitHub Actions runners execute shell commands with `set -eo pipefail`. The `; true` pattern — `cmd; true` — does NOT suppress the exit code when `set -e` is active. The shell terminates on the first failed command before reaching `true`. The correct idiom is `|| true` — `cmd || true` — which catches the non-zero exit in a logical OR that always yields 0.
+- `pnpm install --frozen-lockfile` — succeeds, installs all deps including semantic-release into the virtual store
+- `npx tsdown` — succeeds (tsdown is a devDependency, found in local node_modules)
+- `npx --package semantic-release@25 --package @semantic-release/git semantic-release` — fails with exit 127
 
-### Issue 3: pnpm v11 configuration migration
+### Phase 3 — Hypothesize
 
-The `pnpm.onlyBuiltDependencies` field in `package.json` is deprecated and ignored in pnpm v11. pnpm v11 uses `allowBuilds` in `pnpm-workspace.yaml` instead. The deprecated config produces a warning on every pnpm command: `The "pnpm" field in package.json is no longer read by pnpm. The following keys were ignored: "pnpm.onlyBuiltDependencies".`
+**Hypothesis A (most likely):** The `npx --package` flag attempts to download packages from the npm registry into npm's global cache. In CI, the npm cache is not configured (only pnpm cache is set via `setup-node cache: pnpm`), and the download either fails or `npx` in npm 10.x handles the `--package` flag differently than npm 11.x (different resolution and install behavior for transient packages).
 
-Additionally, `.npmrc` with `ignore-scripts=true` was added as a workaround for the deprecated config not working. With the proper `allowBuilds` config, this workaround is unnecessary.
+**Hypothesis B:** The `--package` flag with two packages causes `npx` to fail when one package (`@semantic-release/git`) is a local devDependency but the other (`semantic-release@25`) requires a registry fetch. The inconsistency in resolution sources causes `npx` to give up.
 
-**Risk level:** Low — the fix is mechanical (config migration + CI step cleanup). No code logic is affected.
+**Hypothesis C:** The npm cache directory on the GitHub Actions runner is restricted or the npm registry is unreachable from the ephemeral npx installation environment.
+
+### Phase 4 — Verify
+
+Confirmed locally:
+- `npx --package` with a non-installed package (`cowsay`) downloads and runs successfully — so `npx --package` does work to download packages from the registry locally
+- `semantic-release` IS in the local pnpm virtual store (at `node_modules/.pnpm/semantic-release@25.0.3_typescript@5.9.3/`)
+- `node_modules/.bin/semantic-release` exists and runs correctly via `pnpm exec semantic-release --version` (exit 0)
+
+The root cause is a mismatch between how `npx --package` resolves packages in npm 10 (CI) vs npm 11 (local). Since `semantic-release` is already available in the local node_modules via the lockfile (peer dependency of `@semantic-release/git`), the `--package` download is both unnecessary and unreliable.
+
+**Risk level:** Low — fix is a one-line CI workflow change.
 
 ## TDD Fix Plan
 
-A single RED-GREEN-REFACTOR cycle since the fix is configuration-only with no application code changes.
+### 1. RED → GREEN: Fix the Release step
 
-### 1. Create `pnpm-workspace.yaml` (GREEN)
+**GREEN:** Replace `npx --package semantic-release@25 --package @semantic-release/git semantic-release` with `pnpm exec semantic-release` in the workflow file. This resolves from the local `node_modules/.bin` where `semantic-release` is already installed.
 
-**Action:** Create `pnpm-workspace.yaml` with `allowBuilds` for esbuild and sharp.
-
-```yaml
-allowBuilds:
-  esbuild: true
-  sharp: true
-```
-
-### 2. Remove deprecated `package.json` field (REFACTOR)
-
-**Action:** Remove the `pnpm.onlyBuiltDependencies` array from `package.json`.
-
-### 3. Clean up `.npmrc` (REFACTOR)
-
-**Action:** Remove `ignore-scripts=true` from `.npmrc`. Empty file is fine.
-
-### 4. Fix CI workflow (REFACTOR)
-
-**Action:** In `.github/workflows/release.yml`:
-- Remove the "Approve builds" step entirely
-- Change `pnpm install --frozen-lockfile --ignore-scripts && npx husky` to `pnpm install --frozen-lockfile`
-
-**verify:** `pnpm install --frozen-lockfile` succeeds (no approval needed, esbuild/sharp allowed)
-**verify:** `pnpm install` succeeds locally (pnpm v11.1.2 no longer blocked by dep-status-check)
-**verify:** `npx tsdown` still works (esbuild postinstall ran)
-**verify:** `npx vitest run` still works (vitest/esbuild available)
+**verify:** `pnpm exec semantic-release --version` returns `25.0.3`
 
 ## Acceptance Criteria
 
-- [ ] `pnpm install --frozen-lockfile` succeeds without `--ignore-scripts`
-- [ ] No pnpm warnings about deprecated `pnpm.onlyBuiltDependencies`
-- [ ] CI "Approve builds" step removed, pipeline runs clean
-- [ ] `npx tsdown` builds successfully
-- [ ] `npx vitest run` runs tests successfully
+- [ ] Release step uses `pnpm exec semantic-release` instead of `npx --package`
+- [ ] `pnpm exec semantic-release --version` confirms version 25.0.3
+- [ ] CI pipeline can run through to completion
 
 ## Resolution
 
-- Created `pnpm-workspace.yaml` with `allowBuilds: { esbuild: true, sharp: true }`
-- Removed deprecated `pnpm.onlyBuiltDependencies` from `package.json`
-- Removed `ignore-scripts=true` from `.npmrc`
-- Removed "Approve builds" step from CI workflow
-- Replaced `pnpm install --frozen-lockfile --ignore-scripts && npx husky` with `pnpm install --frozen-lockfile` (husky runs via `prepare` lifecycle)
+- Changed Release step from `npx --package semantic-release@25 --package @semantic-release/git semantic-release` to `pnpm exec semantic-release`
+- `semantic-release@25.0.3` was already present as a transitive peer dependency of `@semantic-release/git` in the pnpm virtual store
+- `pnpm exec` resolves from local `node_modules/.bin` — no registry download needed, works with any npm version, always matches the lockfile
 
 **Verification:**
-- `pnpm install --frozen-lockfile` → exit 0, no warnings
-- `npx tsdown` → builds successfully
-- `npx vitest run` → "No test files found" (expected pre-Epic1)
+- `pnpm exec semantic-release --version` → `25.0.3` (exit 0)
