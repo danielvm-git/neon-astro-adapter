@@ -57,9 +57,11 @@ The root cause is a mismatch between how `npx --package` resolves packages in np
 
 ## Acceptance Criteria
 
-- [ ] Release step uses `pnpm exec semantic-release` instead of `npx --package`
-- [ ] `pnpm exec semantic-release --version` confirms version 25.0.3
-- [ ] CI pipeline can run through to completion
+- [x] Release step uses `pnpm exec semantic-release` instead of `npx --package`
+- [x] `pnpm exec semantic-release --version` confirms version 25.0.3
+- [x] Husky commit-msg hook skips `[skip ci]` commits
+- [x] `v0.0.0` tag exists as version baseline
+- [ ] CI pipeline runs through to completion (next push to `main`)
 
 ## Resolution
 
@@ -72,3 +74,16 @@ The root cause is a mismatch between how `npx --package` resolves packages in np
 - `pnpm install --frozen-lockfile` → exit 0
 - `npx tsdown` → builds successfully
 - `pnpm exec semantic-release --version` → `25.0.3` (exit 0)
+
+### Additional fix: husky commitlint blocks semantic-release commits
+
+Semantic-release generates `chore(release): X.Y.Z [skip ci]` commits with release notes containing GitHub URLs. These exceed commitlint's 100-char `body-max-line-length` rule, causing the commit-msg hook to reject the commit.
+
+**Fix:** Updated `.husky/commit-msg` to detect `[skip ci]` markers and bypass commitlint for semantic-release generated commits:
+```sh
+grep -q '\[skip ci\]' "$1" || npx --no -- commitlint --edit "$1"
+```
+
+### Version baseline: v0.0.0 tag
+
+Semantic-release defaults the first release on `main` to `1.0.0` (hardcoded `FIRST_RELEASE` constant). Tagged `v0.0.0` as the initial baseline so subsequent `feat:` commits bump from `0.0.0` → `0.1.0`, following the TDD epic-by-epic plan.
