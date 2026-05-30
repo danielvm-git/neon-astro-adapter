@@ -13,9 +13,10 @@ Stack: TypeScript / Astro >=5 / Node 26
 | Test   | `npx vitest run` |
 | Build  | `npx tsdown` |
 | Lint   | `npx tsc --noEmit` |
+| Dep source | `opensrc fetch @neondatabase/auth && code $(opensrc path @neondatabase/auth)` |
 
 ## Architecture
-5 layers: Adapter (maps APIContext to RequestContext) → Handler (proxy requests via handleAuthProxyRequest) → Middleware (auth decisions via processAuthMiddleware) → Unified Entry (createAstroAuth()) → Integration (neonAuth() AstroIntegration). Client (createAuthClient) for browser use.
+5 layers: Adapter (maps APIContext to RequestContext) → Handler (proxy requests via thin HTTP proxy) → Middleware (auth decisions via upstream session check) → Unified Entry (createAstroAuth()) → Integration (neonAuth() AstroIntegration). Client (createAuthClient) for browser use. Standalone — no import of `@neondatabase/auth` server internals.
 
 ## Conventions
 - TDD: every story starts RED (failing test), then GREEN (impl), then REFACTOR

@@ -2,8 +2,7 @@
 
 ## Current Status
 
-Standalone `@neondatabase/auth-astro` project. Release infrastructure (Epic 0) complete.
-Ready to begin Epic 1 (TDD cycle).
+Epic 1 (Adapter Core) complete. Epic 2 (Handler & Middleware) is next.
 
 ## Git Metadata
 
@@ -23,11 +22,11 @@ Ready to begin Epic 1 (TDD cycle).
 
 ## Pending (ordered by epic)
 
-### Epic 1 — Adapter Core (next)
-- [ ] 1.1 RED — `src/server/adapter.test.ts` (write failing tests)
-- [ ] 1.2 GREEN — `src/server/adapter.ts` (implement)
-- [ ] 1.3 REFACTOR — wire exports, tsdown entry
-- [ ] → `git commit -m "feat: adapter core"` → push → minor bump
+### Epic 1 — Adapter Core
+- [x] 1.1 RED — `src/server/adapter.test.ts`
+- [x] 1.2 GREEN — `src/server/adapter.ts`
+- [x] 1.3 REFACTOR — wire exports
+- [x] → `a9ae72b feat: adapter core` → pushed → minor bump
 
 ### Epic 2 — Handler & Middleware
 - [ ] 2.1 RED — `src/server/handler.test.ts`
@@ -55,4 +54,4 @@ Ready to begin Epic 1 (TDD cycle).
 
 ## Next Action
 
-Start Epic 1 Story 1.1: Write `src/server/adapter.test.ts` with failing tests for `createAstroRequestContext()`.
+Start Epic 2: Build thin HTTP proxy handler (`src/server/handler.ts`) + session-check middleware (`src/server/middleware.ts`). No import of `@neondatabase/auth` server internals — standalone HTTP proxy approach.
