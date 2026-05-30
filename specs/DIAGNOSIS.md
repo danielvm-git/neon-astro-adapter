@@ -61,12 +61,12 @@ Risk level: **Medium** — blocks all automated releases. Fix requires package r
 - [x] `npx vitest run` passes all 8 tests
 - [x] `npx tsc --noEmit` passes
 - [x] Package published to npm at v0.0.0 (`npm search` confirms visibility)
-- [ ] CI release workflow completes successfully on next push to `main`
+- [x] CI release workflow completes successfully on push to `main`
+- [x] Package published to npm at v0.1.2 via semantic-release with provenance attestation
 
 ## Resolution
 
 **Fixed:** 2026-05-30
 **Root cause confirmed:** Package scope `@neondatabase` requires Neon org membership; user is a solo developer without access.
 **Fix applied:** Renamed package from `@neondatabase/auth-astro` to `@danielvm/neon-astro-auth` in `package.json`, `README.md`, `specs/CONTEXT.md`, `specs/RELEASE-PLAN.md`, `PLAN.md`, and `specs/DIAGNOSIS.md`. Published initial v0.0.0 to npm manually.
-**Evidence:** `npx tsdown` exits 0, `npx vitest run` exits 0, `npx tsc --noEmit` exits 0, `npm search @danielvm/neon-astro-auth` returns the package.
-**Next:** Push to `main` to confirm semantic-release completes.
+**Evidence:** `npx tsdown` exits 0, `npx vitest run` exits 0, `npx tsc --noEmit` exits 0, `npm search @danielvm/neon-astro-auth` returns the package, CI workflow [succeeded](https://github.com/danielvm-git/neon-astro-adapter/actions/runs/26689644186), package published at v0.1.2.
