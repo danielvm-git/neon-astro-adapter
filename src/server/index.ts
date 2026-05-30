@@ -1,3 +1,2 @@
-export function createAstroAuth(): void {
-  // Astro server-side auth handler stub
-}
+export { createAstroRequestContext } from './adapter';
+export type { RequestContext, CookieOptions } from './adapter';
