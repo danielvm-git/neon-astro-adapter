@@ -1,6 +1,6 @@
 {
   "name": "@danielvm/neon-astro-auth",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Neon Database Auth adapter for Astro",
   "private": false,
   "type": "module",
