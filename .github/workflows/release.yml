@@ -28,11 +28,8 @@ jobs:
           node-version: "lts/*"
           cache: pnpm
 
-      - name: Approve builds
-        run: pnpm approve-builds --global esbuild sharp 2>/dev/null; true
-
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts && npx husky
+        run: pnpm install --frozen-lockfile
 
       - name: Build
         run: npx tsdown
