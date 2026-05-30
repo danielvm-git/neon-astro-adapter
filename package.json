@@ -1,0 +1,63 @@
+{
+  "name": "@neondatabase/auth-astro",
+  "version": "0.0.0",
+  "description": "Neon Database Auth adapter for Astro",
+  "private": false,
+  "type": "module",
+  "packageManager": "pnpm@11.1.2",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.mts",
+      "default": "./dist/server/index.mjs"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "clean": "rm -rf dist",
+    "commitlint": "commitlint --edit",
+    "prepare": "husky"
+  },
+  "peerDependencies": {
+    "astro": "^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "astro": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.0",
+    "@commitlint/config-conventional": "^19.8.0",
+    "@semantic-release/git": "^10.0.1",
+    "husky": "^9.1.7",
+    "tsdown": "^0.17.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.7"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp"
+    ]
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "Apache-2.0"
+}
