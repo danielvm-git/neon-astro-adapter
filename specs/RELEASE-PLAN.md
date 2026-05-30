@@ -90,29 +90,37 @@ MVP v1.0.0 ships when Epics 1-4 are complete. Epic 5 is docs-only (no release).
 
 ### Story 3.4 — Implement createAuthClient() (GREEN)
 - **File:** `src/index.ts`
-- **Implements:** Thin wrapper around `createAuthClient` from `@neondatabase/auth` (defaults to `BetterAuthVanillaAdapter`)
+- **Implements:** Thin wrapper around `createAuthClient<T>` from `@neondatabase/auth` — forwards generic, no `as` cast
 - **Verify:** test passes
+
+### Story 3.5 — Review fixes
+- **Changes:** Forward generic T to upstream call, tighten override tests, remove dead `isSkipRoute`
+- **Verify:** `npx tsdown && npx tsc --noEmit && npx vitest run`
 
 ---
 
-## Epic 4: Integration + v1.0.0 — `feat:` → minor (v1.0.0)
+## Epic 4: Integration + v1.0.0 — `feat:` → v1.0.0
 
-**MVP gate:** `neonAuth()` integration auto-wires in `astro.config.mjs`.
+**MVP gate:** `neonAuth()` AstroIntegration auto-wires in `astro.config.mjs`.
+
+**Integration API (confirmed via opensrc astro@6.4.2):**
+- `astro:config:setup` hook receives `injectRoute({ pattern, entrypoint, prerender? })` and `addMiddleware({ order: 'pre'|'post', entrypoint })`
+- `InjectedRoute`: `{ pattern: string, entrypoint: string | URL, prerender?: boolean }`
+- `AstroIntegrationMiddleware`: `{ order: 'pre' | 'post', entrypoint: string | URL }`
 
 ### Story 4.1 — Write integration test (RED)
 - **File:** `src/integration.test.ts`
-- **Test:** AstroIntegration hook `astro:config:setup` fires `injectRoute` and `addMiddleware`
+- **Test:** `neonAuth()` returns `AstroIntegration` with `name` and `astro:config:setup` hook; hook calls `injectRoute` with catch-all pattern `/api/auth/[...slug]` and `addMiddleware` with `order: 'pre'`
 - **Verify:** test fails
 
 ### Story 4.2 — Implement integration (GREEN)
 - **File:** `src/integration.ts`
-- **Implements:** `neonAuth()` returning `AstroIntegration` with `astro:config:setup` hook
+- **Implements:** `neonAuth(config?)` returning `AstroIntegration` — `astro:config:setup` uses `injectRoute` for handler + `addMiddleware` for middleware, with entrypoint URLs to this package's exports
 - **Verify:** test passes
 
 ### Story 4.3 — Publish v1.0.0
-- Semantic-release aggregates all `feat:` commits into one minor bump per epic
-- All epics 1-4 complete → v1.0.0
-- **Verify:** `npx semantic-release --dry-run --no-ci` shows v1.0.0
+- All epics 1-4 complete → semantic-release publishes v1.0.0
+- **Verify:** `gh run list --branch main` shows green release
 
 ---
 
