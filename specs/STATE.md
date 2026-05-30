@@ -2,14 +2,14 @@
 
 ## Current Status
 
-Epic 4 (Integration + v1.0.0) complete. Next: Example app (post-v1.0.0).
+v1.0.0 shipped. All 4 epics complete. Example app next.
 
 ## Git Metadata
 
 - **Repo:** `danielvm-git/neon-astro-adapter`
 - **Current branch:** `main`
 - **Release:** semantic-release via GitHub Actions on merge to `main`
-- **Latest release:** v0.3.0
+- **Latest release:** v1.0.0
 
 ## Completed
 
