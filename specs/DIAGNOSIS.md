@@ -64,8 +64,11 @@ The root cause is a mismatch between how `npx --package` resolves packages in np
 ## Resolution
 
 - Changed Release step from `npx --package semantic-release@25 --package @semantic-release/git semantic-release` to `pnpm exec semantic-release`
-- `semantic-release@25.0.3` was already present as a transitive peer dependency of `@semantic-release/git` in the pnpm virtual store
-- `pnpm exec` resolves from local `node_modules/.bin` — no registry download needed, works with any npm version, always matches the lockfile
+- Added `semantic-release@25` as a direct devDependency (`pnpm add -D semantic-release@25`)
+- `semantic-release` was a peer dependency of `@semantic-release/git` — pnpm peer dependency hoisting varies across versions and environments, causing `pnpm exec` to fail with `ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL` in CI
+- Making it a direct dependency guarantees `node_modules/.bin/semantic-release` is always created regardless of peer dep resolution
 
-**Verification:**
+**CI pipeline simulation:**
+- `pnpm install --frozen-lockfile` → exit 0
+- `npx tsdown` → builds successfully
 - `pnpm exec semantic-release --version` → `25.0.3` (exit 0)
