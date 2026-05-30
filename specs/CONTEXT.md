@@ -2,7 +2,7 @@
 
 ## Stack
 
-- **Project:** Standalone `@neondatabase/auth-astro` (not part of neon-js monorepo)
+- **Project:** Standalone `@danielvm/neon-astro-auth` (not part of neon-js monorepo)
 - **Build:** tsdown (Rolndown-powered), ESM-only output
 - **Framework:** Astro >=5.0.0 (peer dependency, optional)
 - **Auth Core:** `@neondatabase/auth` (npm dependency) — Better Auth 1.x via framework-agnostic server layer
@@ -42,7 +42,7 @@ Astro requires `APIContext` threaded explicitly. The adapter factory takes `cont
 ## Exports
 
 ```
-@neondatabase/auth-astro
+@danielvm/neon-astro-auth
 ├── .                  → dist/index.mjs          (createAuthClient)
 ├── ./server           → dist/server/index.mjs   (createAstroAuth)
 ```

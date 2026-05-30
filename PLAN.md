@@ -149,7 +149,7 @@ The **AstroIntegration** for zero-config setup:
 ```typescript
 export function neonAuth(): AstroIntegration {
   return {
-    name: '@neondatabase/auth-astro',
+    name: '@danielvm/neon-astro-auth',
     hooks: {
       'astro:config:setup'({ injectRoute, addMiddleware, injectTypes }) {
         // Auto-inject the catch-all API route

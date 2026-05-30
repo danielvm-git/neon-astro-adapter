@@ -17,7 +17,7 @@ MVP v1.0.0 ships when Epics 1-4 are complete. Epic 5 is docs-only (no release).
 
 ## Epic 1: Adapter Core — `feat:` → minor
 
-**MVP gate:** `import { createAstroRequestContext } from '@neondatabase/auth-astro/server'` compiles and works.
+**MVP gate:** `import { createAstroRequestContext } from '@danielvm/neon-astro-auth/server'` compiles and works.
 
 ### Story 1.1 — Write adapter test (RED)
 - **File:** `src/server/adapter.test.ts`

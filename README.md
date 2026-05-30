@@ -1,8 +1,8 @@
 # Neon Auth Astro Adapter
 
-[![npm version](https://img.shields.io/npm/v/@neondatabase/auth-astro)](https://www.npmjs.com/package/@neondatabase/auth-astro)
+[![npm version](https://img.shields.io/npm/v/@danielvm/neon-astro-auth)](https://www.npmjs.com/package/@danielvm/neon-astro-auth)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![npm downloads](https://img.shields.io/npm/dm/@neondatabase/auth-astro)](https://www.npmjs.com/package/@neondatabase/auth-astro)
+[![npm downloads](https://img.shields.io/npm/dm/@danielvm/neon-astro-auth)](https://www.npmjs.com/package/@danielvm/neon-astro-auth)
 
 Astro adapter for [Neon Auth](https://neon.tech/docs/guides/neon-auth) — a Better Auth integration. Provides an adapter, API handler, middleware, client, and Astro integration in a single package.
 
@@ -18,11 +18,11 @@ Astro adapter for [Neon Auth](https://neon.tech/docs/guides/neon-auth) — a Bet
 ## Installation
 
 ```bash
-npm install @neondatabase/auth-astro
+npm install @danielvm/neon-astro-auth
 # or
-pnpm add @neondatabase/auth-astro
+pnpm add @danielvm/neon-astro-auth
 # or
-yarn add @neondatabase/auth-astro
+yarn add @danielvm/neon-astro-auth
 ```
 
 > **Peer dependency:** Astro >=5.0.0 (optional — only needed if you use the integration or middleware).
@@ -35,7 +35,7 @@ Add the integration to your `astro.config.mjs`:
 
 ```js
 import { defineConfig } from 'astro/config';
-import neonAuth from '@neondatabase/auth-astro/integration';
+import neonAuth from '@danielvm/neon-astro-auth/integration';
 
 export default defineConfig({
   integrations: [
@@ -57,7 +57,7 @@ This automatically injects the API route and middleware.
 
 ```ts
 import type { APIRoute } from 'astro';
-import { createAstroAuth } from '@neondatabase/auth-astro/server';
+import { createAstroAuth } from '@danielvm/neon-astro-auth/server';
 
 const auth = createAstroAuth({
   baseUrl: 'https://your-better-auth-server.com',
@@ -71,7 +71,7 @@ export const ALL: APIRoute = auth.handler;
 
 ```ts
 import { defineMiddleware } from 'astro/middleware';
-import { createAstroAuth } from '@neondatabase/auth-astro/server';
+import { createAstroAuth } from '@danielvm/neon-astro-auth/server';
 
 const auth = createAstroAuth({
   baseUrl: 'https://your-better-auth-server.com',
@@ -84,7 +84,7 @@ export const onRequest = defineMiddleware(auth.middleware);
 **Client** — `src/lib/auth.ts`:
 
 ```ts
-import { createAuthClient } from '@neondatabase/auth-astro';
+import { createAuthClient } from '@danielvm/neon-astro-auth';
 
 export const authClient = createAuthClient();
 ```
@@ -101,18 +101,18 @@ export const authClient = createAuthClient();
 
 ## API
 
-### `@neondatabase/auth-astro`
+### `@danielvm/neon-astro-auth`
 
 ```ts
-import { createAuthClient } from '@neondatabase/auth-astro';
+import { createAuthClient } from '@danielvm/neon-astro-auth';
 ```
 
 Creates a pre-configured Better Auth client for browser usage.
 
-### `@neondatabase/auth-astro/server`
+### `@danielvm/neon-astro-auth/server`
 
 ```ts
-import { createAstroAuth } from '@neondatabase/auth-astro/server';
+import { createAstroAuth } from '@danielvm/neon-astro-auth/server';
 
 const auth = createAstroAuth(config);
 //    ^?.handler     — Astro API route handler
