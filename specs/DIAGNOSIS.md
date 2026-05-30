@@ -49,6 +49,6 @@ Risk level: **Low** — one-line config fix, no code changes.
 **Fixed:** 2026-05-30
 **Root cause confirmed:** Placeholder string `set this to true or false` in `pnpm-workspace.yaml` `allowBuilds.core-js` instead of boolean `true`
 **Fix applied:** Changed value to `true` in `pnpm-workspace.yaml`
-**Hardening added:** None needed — one-time config fix
+**Hardening added:** CI pipeline (`.github/workflows/release.yml`) runs `pnpm install --frozen-lockfile` on every push — catches bad configs automatically. No additional mechanism needed for a static config value.
 **Evidence:** `pnpm install --frozen-lockfile` exits 0
 **Commit:** `fix: approve core-js build script in pnpm-workspace.yaml`
