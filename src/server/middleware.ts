@@ -25,10 +25,6 @@ type MiddlewareFn = (
   next: () => Promise<Response>
 ) => Promise<Response>;
 
-function isSkipRoute(pathname: string, loginUrl: string): boolean {
-  if (pathname.startsWith(loginUrl)) return true;
-  return SKIP_ROUTES.some((route) => pathname.startsWith(route));
-}
 
 function applySetCookieFromUpstream(
   ctx: { set(name: string, value: string, options?: CookieOptions): void },

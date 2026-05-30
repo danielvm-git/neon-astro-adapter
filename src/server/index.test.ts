@@ -1,10 +1,19 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createAstroAuth } from './index';
 
 const VALID_CONFIG = {
   baseUrl: 'https://auth.example.com',
   cookies: { secret: 'a'.repeat(32) },
 };
+
+function mockContext(pathname: string) {
+  return {
+    url: new URL(`http://localhost:4321${pathname}`),
+    request: { headers: { get: vi.fn(() => null) } },
+    cookies: { set: vi.fn() },
+    redirect: vi.fn((path: string) => new Response(null, { status: 302, headers: { Location: path } })),
+  };
+}
 
 describe('createAstroAuth', () => {
   describe('config validation', () => {
@@ -48,18 +57,29 @@ describe('createAstroAuth', () => {
       expect(typeof middleware).toBe('function');
     });
 
-    it('middleware accepts overrides for loginUrl', () => {
-      const auth = createAstroAuth(VALID_CONFIG);
-      const middleware = auth.middleware({ loginUrl: '/custom-login' });
+    it('middleware accepts overrides for loginUrl', async () => {
+      const auth = createAstroAuth({
+        ...VALID_CONFIG,
+        loginUrl: '/custom-login',
+      });
+      const middleware = auth.middleware();
+      const next = vi.fn<() => Promise<Response>>().mockResolvedValue(new Response());
 
-      expect(typeof middleware).toBe('function');
+      const response = await middleware(mockContext('/custom-login') as never, next);
+
+      expect(response.status).toBe(200);
+      expect(next).toHaveBeenCalled();
     });
 
-    it('middleware accepts skipRoutes override', () => {
+    it('middleware accepts skipRoutes override', async () => {
       const auth = createAstroAuth(VALID_CONFIG);
       const middleware = auth.middleware({ skipRoutes: ['/health'] });
+      const next = vi.fn<() => Promise<Response>>().mockResolvedValue(new Response());
 
-      expect(typeof middleware).toBe('function');
+      const response = await middleware(mockContext('/health') as never, next);
+
+      expect(response.status).toBe(200);
+      expect(next).toHaveBeenCalled();
     });
   });
 

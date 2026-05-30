@@ -1,13 +1,17 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 
+let mockClient: Record<string, unknown>;
+
 vi.mock('@neondatabase/auth', () => ({
-  createAuthClient: vi.fn((url: string) => ({
-    signIn: { email: vi.fn(), social: vi.fn() },
-    signUp: { email: vi.fn() },
-    signOut: vi.fn(),
-    getSession: vi.fn(),
-    _url: url,
-  })),
+  createAuthClient: vi.fn((url: string) => {
+    mockClient = {
+      signIn: { email: vi.fn(), social: vi.fn() },
+      signUp: { email: vi.fn() },
+      signOut: vi.fn(),
+      getSession: vi.fn(),
+    };
+    return mockClient;
+  }),
 }));
 
 import { createAuthClient as _upstreamCreate } from '@neondatabase/auth';
@@ -36,6 +40,6 @@ describe('createAuthClient', () => {
   it('returns the exact same object from the upstream', () => {
     const client = createAuthClient('https://auth.example.com');
 
-    expect((client as unknown as { _url: string })._url).toBe('https://auth.example.com');
+    expect(client).toBe(mockClient);
   });
 });

@@ -7,5 +7,5 @@ import {
 export function createAuthClient<T extends NeonAuthAdapter = NeonAuthAdapter>(
   url: string,
 ): NeonAuthPublicApi<T> {
-  return _createAuthClient(url) as NeonAuthPublicApi<T>;
+  return _createAuthClient<T>(url);
 }
