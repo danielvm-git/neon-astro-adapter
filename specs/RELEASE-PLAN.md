@@ -69,26 +69,28 @@ MVP v1.0.0 ships when Epics 1-4 are complete. Epic 5 is docs-only (no release).
 
 ## Epic 3: Unified Entry & Client — `feat:` → minor
 
-**MVP gate:** One-liner `createAstroAuth(config)` exports handler + middleware + server methods.
+**MVP gate:** One-liner `createAstroAuth(config)` returns `{ handler(), middleware() }`.
+
+**Architecture note:** `createAuthServerInternal()` is not exported from `@neondatabase/auth` (confirmed via opensrc). Our `createAstroAuth` returns handler + middleware only — no server methods (signIn, signUp, etc.). Those live in the client-side `createAuthClient()`.
 
 ### Story 3.1 — Write index test (RED)
 - **File:** `src/server/index.test.ts`
-- **Test:** Config validation (secret missing/short/valid, sessionDataTtl, domain, sameSite); return structure has `.handler`, `.middleware`, server methods
+- **Test:** Config validation (secret missing/short/valid); return structure has `.handler()` (returns `{ GET, POST, ... }`) and `.middleware()` (returns MiddlewareFn)
 - **Verify:** test fails
 
 ### Story 3.2 — Implement createAstroAuth() (GREEN)
 - **File:** `src/server/index.ts`
-- **Implements:** Wraps `createAuthServerInternal()`, re-exports handler + middleware as method properties
+- **Implements:** `createAstroAuth(config)` — validates config, wires `astroApiHandler` + `astroMiddleware`, returns `{ handler: () => astroApiHandler(config), middleware: (overrides?) => astroMiddleware({...config, ...overrides}) }`
 - **Verify:** test passes
 
 ### Story 3.3 — Write client test (RED)
 - **File:** `src/index.test.ts`
-- **Test:** `createAuthClient()` returns expected client shape
+- **Test:** `createAuthClient(url)` returns object with `signIn`, `signUp`, `getSession` methods
 - **Verify:** test fails
 
 ### Story 3.4 — Implement createAuthClient() (GREEN)
 - **File:** `src/index.ts`
-- **Implements:** Pre-configured `createAuthClient()` using `BetterAuthReactAdapter()`
+- **Implements:** Thin wrapper around `createAuthClient` from `@neondatabase/auth` (defaults to `BetterAuthVanillaAdapter`)
 - **Verify:** test passes
 
 ---
