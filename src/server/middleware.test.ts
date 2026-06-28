@@ -185,7 +185,7 @@ describe('astroMiddleware', () => {
       expect(ctx.redirect).toHaveBeenCalledWith('/auth/sign-in');
     });
 
-    it("allows access when upstream fetch fails (graceful degradation)", async () => {
+    it("redirects to login when upstream fetch fails (fail-closed)", async () => {
       mockFetch.mockRejectedValue(new Error('Network error'));
 
       const middleware = astroMiddleware({
@@ -198,8 +198,9 @@ describe('astroMiddleware', () => {
       });
 
       const response = await middleware(ctx as never, next);
-      expect(response.status).toBe(200);
-      expect(next).toHaveBeenCalled();
+      expect(response.status).toBe(302);
+      expect(ctx.redirect).toHaveBeenCalledWith('/auth/sign-in');
+      expect(next).not.toHaveBeenCalled();
     });
 
     it("sets session cookies on successful session check", async () => {

@@ -130,7 +130,7 @@ export function astroMiddleware(config: MiddlewareConfig): MiddlewareFn {
         signal: AbortSignal.timeout(10_000),
       });
     } catch {
-      return next();
+      return context.redirect(loginUrl);
     }
 
     if (!sessionResponse.ok) return context.redirect(loginUrl);
