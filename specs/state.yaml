@@ -1,8 +1,6 @@
-active_flow: fix_bug
-bug_cycle:
-  current_step: 3
-  completed_steps: [1, 2]
-  bug_id: BUG-002
-  bug_file: specs/bugs/BUG-002-fail-open-auth-middleware.md
-handoff:
-  next_skill: develop-tdd
+active_flow: null
+release:
+  last_bug: BUG-002
+  commit: 6762b48
+  version: 1.0.3
+  ci_verified: true
