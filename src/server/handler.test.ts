@@ -231,6 +231,60 @@ describe('astroApiHandler', () => {
     });
   });
 
+  describe('SSRF protection', () => {
+    let mockFetch: ReturnType<typeof vi.fn<typeof fetch>>;
+
+    beforeEach(() => {
+      mockFetch = vi.fn<typeof fetch>().mockResolvedValue(new Response('{}', { status: 200 }));
+      globalThis.fetch = mockFetch;
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('returns 400 when slug resolves to an absolute URL with a different host', async () => {
+      const { GET } = astroApiHandler({
+        baseUrl: 'https://auth.example.com',
+        cookies: { secret: 'a'.repeat(32) },
+      });
+
+      const response = await GET(
+        mockContext({ slug: ['https:', '', 'evil.com', 'steal'], method: 'GET' })
+      );
+
+      expect(response.status).toBe(400);
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when slug resolves to a protocol-relative URL targeting a different host', async () => {
+      const { GET } = astroApiHandler({
+        baseUrl: 'https://auth.example.com',
+        cookies: { secret: 'a'.repeat(32) },
+      });
+
+      const response = await GET(
+        mockContext({ slug: ['//evil.com', 'steal'], method: 'GET' })
+      );
+
+      expect(response.status).toBe(400);
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('still proxies a normal relative path correctly', async () => {
+      const { GET } = astroApiHandler({
+        baseUrl: 'https://auth.example.com',
+        cookies: { secret: 'a'.repeat(32) },
+      });
+
+      await GET(mockContext({ slug: ['get-session'], method: 'GET' }));
+
+      const url = new URL(mockFetch.mock.calls[0]![0] as string);
+      expect(url.origin).toBe('https://auth.example.com');
+      expect(mockFetch).toHaveBeenCalledOnce();
+    });
+  });
+
   it('returns GET, POST, PUT, DELETE, PATCH method handlers', () => {
     const handlers = astroApiHandler({
       baseUrl: 'https://auth.example.com',

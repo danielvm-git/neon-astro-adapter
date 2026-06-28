@@ -48,8 +48,14 @@ function buildUpstreamRequestHeaders(request: Request): Headers {
 
 function buildUpstreamUrl(baseUrl: string, path: string, originalUrl: string): URL {
   const normalizedBase = baseUrl.replace(/\/+$/, '');
+  const baseOrigin = new URL(normalizedBase).origin;
   const upstreamUrl = new URL(path, normalizedBase + '/');
   upstreamUrl.search = new URL(originalUrl).search;
+
+  if (upstreamUrl.origin !== baseOrigin) {
+    throw new Error(`Blocked upstream request to disallowed host: ${upstreamUrl.origin}`);
+  }
+
   return upstreamUrl;
 }
 
@@ -79,7 +85,13 @@ export function astroApiHandler(config: HandlerConfig): Record<string, HandlerFn
   const handler: HandlerFn = async (context) => {
     const path = context.params.slug.join('/');
 
-    const upstreamUrl = buildUpstreamUrl(baseUrl, path, context.request.url);
+    let upstreamUrl: URL;
+    try {
+      upstreamUrl = buildUpstreamUrl(baseUrl, path, context.request.url);
+    } catch {
+      return Response.json({ error: 'Invalid path', code: 'INVALID_PATH' }, { status: 400 });
+    }
+
     const headers = buildUpstreamRequestHeaders(context.request);
 
     const body =
